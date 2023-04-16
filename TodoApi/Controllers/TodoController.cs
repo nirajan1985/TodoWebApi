@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.JsonPatch;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TodoApi.Data;
 using TodoApi.Models;
 using TodoApi.Models.Dto;
@@ -80,6 +82,32 @@ namespace TodoApi.Controllers
             };
             _db.Todos.Update(todo);
             _db.SaveChanges();
+            return NoContent();
+        }
+        [HttpPatch("{id:int}",Name ="UpdatePartialTodo")]
+        public IActionResult UpdatePartialTodo(int id, [FromBody] JsonPatchDocument<TodoUpdateDTO> patchDTO)
+        {
+            var todo=_db.Todos.AsNoTracking().FirstOrDefault(u=>u.Id== id);
+            TodoUpdateDTO updateDTO = new()
+            {
+                Id = todo.Id,
+                Name = todo.Name,
+                AppointmentDate = todo.AppointmentDate,
+                Reminder= todo.Reminder
+            };
+            patchDTO.ApplyTo(updateDTO);
+
+            Todo model = new()
+            {
+                Id = updateDTO.Id,
+                Name = updateDTO.Name,
+                AppointmentDate = updateDTO.AppointmentDate,
+                Reminder = updateDTO.Reminder
+            };
+
+            _db.Todos.Update(model);
+            _db.SaveChanges();
+
             return NoContent();
         }
 
