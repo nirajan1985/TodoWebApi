@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using TodoApi.Data;
 using TodoApi.Models;
 using TodoApi.Models.Dto;
+using TodoApi.Repository.IRepository;
 
 namespace TodoApi.Controllers
 {
@@ -12,11 +13,11 @@ namespace TodoApi.Controllers
     [Route ("api/Todo")]
     public class TodoController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
+        private readonly ITodoRepository _dbTodo;
         private readonly IMapper _mapper;
-        public TodoController(ApplicationDbContext db, IMapper mapper)
+        public TodoController(ITodoRepository dbTodo, IMapper mapper)
         {
-            _db= db;
+            _dbTodo = dbTodo;
             _mapper= mapper;
         }
        
@@ -25,7 +26,7 @@ namespace TodoApi.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task< ActionResult<IEnumerable<TodoDTO>>> GetTodos()
         {
-            IEnumerable<Todo> todoList = await _db.Todos.ToListAsync();
+            IEnumerable<Todo> todoList = await _dbTodo.GetAllAsync();
             return Ok(_mapper.Map<List<TodoDTO>>(todoList));
         }
 
@@ -39,7 +40,7 @@ namespace TodoApi.Controllers
             {
                 return BadRequest();
             }
-            var todo=await _db.Todos.FirstOrDefaultAsync(u=>u.Id==id);
+            var todo=await _dbTodo.GetAsync(u=>u.Id==id);
             return Ok( _mapper.Map<TodoDTO>(todo));
         }
 
@@ -50,23 +51,16 @@ namespace TodoApi.Controllers
 
         public async Task< ActionResult<TodoCreateDTO>>CreateTodo([FromBody]TodoCreateDTO createDTO)
         {
-            if (await _db.Todos.FirstOrDefaultAsync(u => u.Name.ToLower() == createDTO.Name.ToLower())!=null)
+            if (await _dbTodo.GetAsync(u => u.Name.ToLower() == createDTO.Name.ToLower())!=null)
             {
                 ModelState.AddModelError("CustomError", "TodoName Already exists");
                 return BadRequest(ModelState);
             }
-            //Todo todo = new()
-            //{
-               
-            //    Name=createDTO.Name,
-            //    AppointmentDate=createDTO.AppointmentDate,
-            //    Reminder=createDTO.Reminder,
-
-            //};
+            
            Todo todo= _mapper.Map<Todo>(createDTO);
 
-            await _db.Todos.AddAsync(todo);
-            await _db.SaveChangesAsync();  
+            await _dbTodo.CreateAsync(todo);
+            await _dbTodo.SaveAsync();  
 
             return CreatedAtRoute("GetTodo", new {id=todo.Id},todo);
         }
@@ -76,10 +70,10 @@ namespace TodoApi.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task< IActionResult> DeleteTodo(int id)
         {
-            var todo=await _db.Todos.FirstOrDefaultAsync(u=>u.Id== id);
+            var todo=await _dbTodo.GetAsync(u=>u.Id== id);
 
-            _db.Todos.Remove(todo);
-            await _db.SaveChangesAsync();
+            await _dbTodo.RemoveAsync(todo);
+            await _dbTodo.SaveAsync();
             return NoContent();
         }
 
@@ -92,17 +86,11 @@ namespace TodoApi.Controllers
             {
                 return BadRequest();
             }
-            //Todo todo = new()
-            //{
-            //    Id = updateDTO.Id,
-            //    Name = updateDTO.Name,
-            //    AppointmentDate = updateDTO.AppointmentDate,
-            //    Reminder = updateDTO.Reminder
-            //};
+           
             Todo todo=_mapper.Map<Todo>(updateDTO);
 
-            _db.Todos.Update(todo);
-            await _db.SaveChangesAsync();
+            await _dbTodo.UpdateAsync(todo);
+            await _dbTodo.SaveAsync();
             return NoContent();
         }
         [HttpPatch("{id:int}",Name ="UpdatePartialTodo")]
@@ -110,7 +98,7 @@ namespace TodoApi.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task< IActionResult> UpdatePartialTodo(int id, [FromBody] JsonPatchDocument<TodoUpdateDTO> patchDTO)
         {
-            var todo=await _db.Todos.AsNoTracking().FirstOrDefaultAsync(u=>u.Id== id);
+            var todo=await _dbTodo.GetAsync(u=>u.Id== id,tracked:false);
             //TodoUpdateDTO updateDTO = new()
             //{
             //    Id = todo.Id,
@@ -130,8 +118,8 @@ namespace TodoApi.Controllers
             //};
             Todo model=_mapper.Map<Todo>(updateDTO);
 
-            _db.Todos.Update(model);
-           await _db.SaveChangesAsync();
+            await _dbTodo.UpdateAsync(model);
+           await _dbTodo.SaveAsync();
 
             return NoContent();
         }
