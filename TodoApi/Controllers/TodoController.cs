@@ -99,23 +99,12 @@ namespace TodoApi.Controllers
         public async Task< IActionResult> UpdatePartialTodo(int id, [FromBody] JsonPatchDocument<TodoUpdateDTO> patchDTO)
         {
             var todo=await _dbTodo.GetAsync(u=>u.Id== id,tracked:false);
-            //TodoUpdateDTO updateDTO = new()
-            //{
-            //    Id = todo.Id,
-            //    Name = todo.Name,
-            //    AppointmentDate = todo.AppointmentDate,
-            //    Reminder= todo.Reminder
-            //};
+            
             TodoUpdateDTO updateDTO=_mapper.Map<TodoUpdateDTO>(todo);
             patchDTO.ApplyTo(updateDTO);
 
-            //Todo model = new()
-            //{
-            //    Id = updateDTO.Id,
-            //    Name = updateDTO.Name,
-            //    AppointmentDate = updateDTO.AppointmentDate,
-            //    Reminder = updateDTO.Reminder
-            //};
+           
+           
             Todo model=_mapper.Map<Todo>(updateDTO);
 
             await _dbTodo.UpdateAsync(model);
