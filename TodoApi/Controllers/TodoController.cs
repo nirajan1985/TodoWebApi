@@ -54,9 +54,15 @@ namespace TodoApi.Controllers
             {
                 if (id == 0)
                 {
-                    return BadRequest();
+                    _response.StatusCode=HttpStatusCode.BadRequest;
+                    return BadRequest(_response);
                 }
                 var todo = await _dbTodo.GetAsync(u => u.Id == id);
+                if(todo== null)
+                {
+                    _response.StatusCode=HttpStatusCode.NotFound;
+                    return BadRequest(_response);
+                }
                 _response.Result = _mapper.Map<TodoDTO>(todo);
                 _response.StatusCode = HttpStatusCode.OK;
                 return Ok(_response);
